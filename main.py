@@ -66,21 +66,37 @@ def home():
     }
 
 
+@app.get("/health")
+def health():
+    return {
+        "status": "ok"
+    }
+
+
 @app.post("/analyze-food")
 async def analyze_food(
     file: UploadFile = File(...),
     portion_g: int = Form(100)
 ):
     if portion_g <= 0:
-        raise HTTPException(status_code=400, detail="Khẩu phần phải lớn hơn 0 gram.")
+        raise HTTPException(
+            status_code=400,
+            detail="Khẩu phần phải lớn hơn 0 gram."
+        )
 
     try:
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes))
     except UnidentifiedImageError:
-        raise HTTPException(status_code=400, detail="File gửi lên không phải ảnh hợp lệ.")
+        raise HTTPException(
+            status_code=400,
+            detail="File gửi lên không phải ảnh hợp lệ."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi đọc ảnh: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Lỗi đọc ảnh: {str(e)}"
+        )
 
     food_key, confidence, top_predictions = predict_food_from_image(image)
     nutrition = calculate_nutrition(food_key, portion_g)
@@ -94,11 +110,15 @@ async def analyze_food(
         "message": None if nutrition else "Chưa có dữ liệu dinh dưỡng cho món này.",
         "medical_note": "Kết quả chỉ mang tính tham khảo, không thay thế tư vấn của bác sĩ hoặc chuyên gia dinh dưỡng."
     }
+
+
 if __name__ == "__main__":
     import uvicorn
+
+    port = int(os.environ.get("PORT", 8000))
 
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000
+        port=port
     )
